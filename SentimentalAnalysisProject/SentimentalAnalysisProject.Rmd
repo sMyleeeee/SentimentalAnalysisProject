@@ -1,0 +1,95 @@
+---
+title: "Untitled"
+output: pdf_document
+date: "2024-12-08"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+
+library(dplyr)
+library(lubridate)
+library(stringr)
+
+setwd("/cloud/project")
+tweets_df <- read.csv("tweetsDF.csv", stringsAsFactors = FALSE)
+
+
+tweets_df$created <- as.POSIXct(tweets_df$created, format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
+tweets_df$Created_At_Round <- as.POSIXct(tweets_df$Created_At_Round, format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
+
+extract_device <- function(source) {
+  matches <- str_match(source, ">(.*?)<")
+  ifelse(!is.na(matches[, 2]), matches[, 2], source)
+}
+tweets_df$statusSource <- sapply(tweets_df$statusSource, extract_device)
+
+tweets_df <- tweets_df %>% distinct()
+
+tweets_df$text <- str_trim(tweets_df$text)
+
+head(tweets_df)
+
+
+
+```
+
+```{r}
+tweets_trend <- tweets_df %>%
+  mutate(date = as.Date(created)) %>%
+  group_by(date) %>%
+  summarise(tweet_count = n())
+
+```
+
+```{r}
+library(ggplot2)
+ggplot(tweets_trend, aes(x = date, y = tweet_count)) +
+  geom_line(color = "blue") +
+  labs(title = "Number of Tweets Over Time", x = "Date", y = "Number of Tweets") +
+  theme_minimal()
+
+```
+
+```{r}
+library(syuzhet)
+tweets_df$sentiment <- get_sentiment(tweets_df$text)
+
+# Classify sentiment into categories
+tweets_df$sentiment_category <- ifelse(tweets_df$sentiment > 0, "Positive",
+                                       ifelse(tweets_df$sentiment < 0, "Negative", "Neutral"))
+```
+
+```{r}
+sentiment_distribution <- tweets_df %>%
+  group_by(sentiment_category) %>%
+  summarise(count = n())
+```
+
+```{r}
+ggplot(sentiment_distribution, aes(x = sentiment_category, y = count, fill = sentiment_category)) +
+  geom_bar(stat = "identity", alpha = 0.7) +
+  labs(title = "Sentiment Distribution", x = "Sentiment", y = "Count") +
+  theme_minimal() +
+  scale_fill_manual(values = c("Positive" = "green", "Negative" = "red", "Neutral" = "gray"))
+```
+
+Trend Analysis
+-The volume of tweets over time increased that might indicate that a trend happened, it increased over time in an upward trend that reveals that topics still interests the users. This can also mean that maybe the brand of iphone and androids release new models of their phones that got the trend to go upward over time as it accumulates tweets talking and discussing about their latest models.
+
+Sentiment Analysis
+-The overall sentiment distribution expresses strong negative emotional tones. It has brand monitoring that tracks how users feel about a product or event. The negative sentiments may give insights for the areas that needs concern or attention while the positive may give insights for monitoring customer satisfaction.
+
+
+Use Case
+-We can use case as a sentiment analysis using social media for monitoring smartphone brands. Using the tweets coming from the users we may understand the sentiment of the public towards a certain event, products, things. We can determine the sentiment of the users by analyzing their tweets and then determining whether they are positive, negative, or neutral. Providing this we can monitor the reactions of the users or customers whether they are satisfied or dissatisfied to such events or products.
+
+Graph Insights:
+-The first graph gives insights for the trend that may have happened as the tweets go upward and increases in volume as days passes, this can give us an idea that maybe some things or events happened that cause so many to tweets and increase over time
+
+-The second graph gives us the comparison of people who may be in favor or dissatisfied with the product or event that happened, and in this case most users tweet negatively and that gives a insight that a certain event or product made most of the user dissatisfied.
+
+
